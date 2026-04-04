@@ -4,9 +4,11 @@
 	str_ID:	.asciz	"ID: "	
 	str_tipo:	
 		.asciz	"Tipo: "
-		
 	str_n:	.asciz	"\n"
-	
+	str_nao_encontrado:
+		.asciz "ID não encontrado.\n"
+	str_encontrado:
+		.asciz "ID encontrado.\n"
 		.align	2
 	loc_id:	 .word	0
 	loc_tipo:.word	1
@@ -20,10 +22,21 @@
 		#4: combustivel
 		#5: corta-fogo
 			
-		#Convensoes (quais registradores usar para cada finalidade):
+		#Convencoes (quais registradores usar para cada finalidade):
 		#s0 : inicio da lista (ponteiro loc_prox)
 		#s1 : endereco do ultimo vagao
 		#t0-2 : iteradores (funcoes listar e remover por ID)
+		
+		#Estrutura do vagão
+		#Todos os tipos de dados ocupam uma word de memória (em 32 bits, 4 bytes)
+		#byte	informacao
+		#0-3	ID (int)
+		#4-7	Tipo do vagão (int)
+		#8-11	Ponteiro pro próximo vagão (ponteiro)
+		
+		#Observacoes:
+		#s0 é ponteiro de ponteiro
+		#loc_proximo é ponteiro
 		
 		.globl 	main
 
@@ -45,6 +58,9 @@
 		
 		addi	t0, zero, 4
 		beq	a0, t0, menu_listar_trem
+		
+		addi	t0, zero, 5
+		beq	a0, t0, menu_buscar_id
 		
 		addi	t0, zero, 6
 		beq	a0, t0, sair
@@ -91,8 +107,8 @@
 		addi	a7, zero, 9
 		ecall
 		
-		sw	t0, 0(a0)
-		sw	t1, 4(a0)
+		sw	t0, 0(a0)	# *(a0+0) (que é a0.id) = id
+		sw	t1, 4(a0)	# *(a0+1) (que é a0.tipo) = tipo
 		
 		jr 	ra
 		
@@ -131,12 +147,12 @@
 		sw	ra, 0(sp)	#ra_inicio no topo da stack
 		
 		jal	alocar_vagao
-					#a0 <- endere�o do vagao alocado
+					#a0 <- endereco do vagao alocado
 		
-		lw	t2, 0(s0)
-		sw	t2, 8(a0)
+		lw	t2, 0(s0)	# (vagao*)t2 recebe o endereco do primeiro elemento da lista
+		sw	t2, 8(a0)	# *(a0+2) (que é a0.loc_prox) = t2 = *s0
 		
-		sw	a0, 0(s0)
+		sw	a0, 0(s0)	# *s0 = a0, ou seja, loc_prox = a0
 		
 		lw	ra, 0(sp)	#recupera o ra_inicio
 		addi	sp, sp, 4	#desaloca o topo da stack
@@ -158,7 +174,7 @@
 	loop_chegar_ao_fim:
 		lw	t1, 0(t0)	#t1 <- *t0
 		
-		addi	t4, t0, 8	#t4 <- endere�o do ultimo ponteiro (que tem valor -1)
+		addi	t4, t0, 8	#t4 <- endereco do ultimo ponteiro (que tem valor -1)
 		
 		beq	t1, t2, chegou_fim
 		addi	t0, t1, 8
@@ -202,6 +218,32 @@
 		
 		addi	sp, sp, 8
 		
+		jr 	ra
+	buscar_id:
+		addi	a7, zero, 5
+		ecall
+		add 	t3, zero, a0	# t3 = a0 = id procurado
+		la 	t1, loc_prox	# vagao** t1 = &loc_prox
+		lw 	t0, 0(t1)	# vagao* t0 = *(t1)
+		addi	t4, zero, -1
+		
+	loop_buscar:
+		beq	t0, t4, nao_encontrado	# Se t0 for -1 (elemento anterior de t0 era o ultimo da lista)
+		lw 	t2, 0(t0)		# int t2 = *(t0+1)
+		beq 	t2, t3, encontrado	# Se t2 (id atual) != t3 (id buscado) volte o loop
+		lw 	t0, 8(t0)		# vagao* t0 = *(t0+2) (que é (*t0).loc_prox)
+		j	loop_buscar
+	encontrado:
+		la	a0, str_encontrado
+		addi	a7, zero, 4
+		ecall
+		add	a0, zero, t0	#retornando o id achado
+		jr	ra
+	nao_encontrado:
+		la	a0, str_nao_encontrado
+		addi 	a7, zero, 4
+		ecall
+		add	a0, zero, t0	#retornando -1 (informando q n foi achado)
 		jr 	ra
 	
 	sair:	addi	a7, zero, 10
