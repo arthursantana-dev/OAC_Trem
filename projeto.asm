@@ -35,8 +35,12 @@
 		#8-11	Ponteiro pro próximo vagão (ponteiro)
 		
 		#Observacoes:
-		#s0 é ponteiro de ponteiro
+		#No C, a seta -> é uma desreferencia + .
+		#	ou seja, ponteiro->valor é igual (*ponteiro).valor
+		#	ou seja, ponteiro.valor é um ponteiro
+		#	e se valor for um ponteiro, ponteiro.valor é ponteiro de ponteiro
 		#loc_proximo é ponteiro
+		#s0 é ponteiro de ponteiro
 		
 		.globl 	main
 
@@ -56,6 +60,9 @@
 		addi	t0, zero, 2
 		beq	a0, t0, menu_adicionar_fim
 		
+		addi	t0, zero, 3
+		beq 	a0, t0, menu_remover_id
+		
 		addi	t0, zero, 4
 		beq	a0, t0, menu_listar_trem
 		
@@ -74,11 +81,16 @@
 	menu_adicionar_fim:
 		jal	adicionar_fim
 		j	main
+	menu_remover_id:
+		jal	remover_id
+		j	main
 			
 	menu_listar_trem:	
 		jal	listar_trem
 		j	main
-		
+	menu_buscar_id:
+		jal	buscar_id
+		j	main
 	alocar_vagao:
 		la	a0, str_ID	#"ID: "
 		addi	a7, zero, 4
@@ -150,7 +162,7 @@
 					#a0 <- endereco do vagao alocado
 		
 		lw	t2, 0(s0)	# (vagao*)t2 recebe o endereco do primeiro elemento da lista
-		sw	t2, 8(a0)	# *(a0+2) (que é a0.loc_prox) = t2 = *s0
+		sw	t2, 8(a0)	# *(a0+2 (que é a0.loc_prox))  = t2 = *s0
 		
 		sw	a0, 0(s0)	# *s0 = a0, ou seja, loc_prox = a0
 		
@@ -160,32 +172,34 @@
 		jr	ra
 		
 	adicionar_fim:
-		addi	sp, sp, -4
-		sw	ra, 0(sp)
+		addi	sp, sp, -4	#Reservando uma word na stack
+		sw	ra, 0(sp)	#Colocando o ra do menu_adicionar_fim na stack
 		
 		jal	alocar_vagao
 		
 		addi	t2, zero, -1	#t2 <- -1 (para comparar com o ponteiro prox)
 		
-		sw	t2, 8(a0)	#[a0].prox = -1
+		sw	t2, 8(a0)	#a0->prox = -1
 	
 		add	t0, zero, s0	#t0 <- endereco do proximo vagao
 		
 	loop_chegar_ao_fim:
-		lw	t1, 0(t0)	#t1 <- *t0
+		lw	t1, 0(t0)	#(tipo vagao*) t1 <- *t0
+					#Agora t1 é o ponteiro pro (ou seja, o endereco do) prox_loc
 		
-		addi	t4, t0, 8	#t4 <- endereco do ultimo ponteiro (que tem valor -1)
-		
-		beq	t1, t2, chegou_fim
-		addi	t0, t1, 8
+		beq	t1, t2, chegou_fim	#Se o endereço do prox_loc do t1 da ultima iteracao for -1 (que signfica que o t1 da ultima iteracao é o último vagão)
+		#else
+		addi	t0, t1, 8 	#(tipo vagao**) t0 = (vagao*)t1.(vagao*)loc_prox. t0 é um ponteiro de ponteiro para o prox_loc do t1
+					#Ou seja, t0 é um ponteiro pro endereço do prox_loc de t1
 		
 		j	loop_chegar_ao_fim
 		
 	chegou_fim:
-		sw	a0, 0(t0)
+		sw	a0, 0(t0)	#*t0 (t0 é o endereço do ponteiro prox_loc) = a0 (endereço do vagão alocado)
+					#Ou seja, t1 antigo (último vagão)->prox_loc = a0 (vagão alocado)
 		
-		lw	ra, 0(sp)
-		addi	sp, sp, 4
+		lw	ra, 0(sp)	#Recuperando ra da stack
+		addi	sp, sp, 4	#Desreservando word
 		
 		jr	ra
 		
@@ -225,26 +239,49 @@
 		add 	t3, zero, a0	# t3 = a0 = id procurado
 		la 	t1, loc_prox	# vagao** t1 = &loc_prox
 		lw 	t0, 0(t1)	# vagao* t0 = *(t1)
-		addi	t4, zero, -1
-		
+		addi	t4, zero, -1	# t4=-1 (pra ter o valor de -1 num reg)
+		addi	t1, zero, 0	# vou usar o t4 pra guardar o vagão anterior na iteração. vou deixar como 0 pra locomotiva
 	loop_buscar:
 		beq	t0, t4, nao_encontrado	# Se t0 for -1 (elemento anterior de t0 era o ultimo da lista)
 		lw 	t2, 0(t0)		# int t2 = *(t0+1)
 		beq 	t2, t3, encontrado	# Se t2 (id atual) != t3 (id buscado) volte o loop
+		add	t1, zero, t0		# vagao* anterior = t0
 		lw 	t0, 8(t0)		# vagao* t0 = *(t0+2) (que é (*t0).loc_prox)
 		j	loop_buscar
 	encontrado:
 		la	a0, str_encontrado
 		addi	a7, zero, 4
 		ecall
-		add	a0, zero, t0	#retornando o id achado
+		add	a0, zero, t0	#Retornando o endereço do encontrado
+		add	a1, zero, t1	#Retornando o endereço do anterior do encontrado
 		jr	ra
 	nao_encontrado:
 		la	a0, str_nao_encontrado
 		addi 	a7, zero, 4
 		ecall
-		add	a0, zero, t0	#retornando -1 (informando q n foi achado)
+		add	a0, zero, t0	#Retornando -1 (informando q n foi achado)
 		jr 	ra
+	remover_id:
+		addi	sp, sp, -4	#Movendo sp 1 word pra trás para reservar 1 word
+		sw	ra, 0(sp)	#Colocando o ra do menu_remover_id no sp (stack)
+		jal	buscar_id	#ra = aqui
+		lw	ra, 0(sp)	#Colocando de volta o ra do menu_remover_id nele
+		addi	sp, sp, 4	#Movendo sp 1 word pra frente pra desreservar 1 word
+		add	t0, zero, a0	#t0 = a0 (endereço do vagao buscado)
+		add	t1, zero, a1	#t1 = a1 (endereço do vagao anterior ao t0)
+		addi	t4, zero, -1	#t4=-1
+		beq	t0, t4, fim_remover		#Se for -1, acabou
+		beq	t1, zero, remover_primeiro 	#Se t1=0 significa que o t0 é o primeiro vagão (locomotiva)
+		lw	t0, 8(t0)	#t0 = t0->loc_prox
+		sw	t0, 8(t1)	#t1->loc_prox = t0
+		jr	ra
+	remover_primeiro:
+		lw	t0, 8(t0)	#t0 = t0->loc_prox
+		sw	t0, 0(s0)	#*s0 = t0
+		jr ra
+	fim_remover:
+		jr ra
+				
 	
 	sair:	addi	a7, zero, 10
 		ecall
