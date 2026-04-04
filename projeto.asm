@@ -40,6 +40,9 @@
 		addi	t0, zero, 1
 		beq	a0, t0, menu_adicionar_inicio
 		
+		addi	t0, zero, 2
+		beq	a0, t0, menu_adicionar_fim
+		
 		addi	t0, zero, 4
 		beq	a0, t0, menu_listar_trem
 		
@@ -50,6 +53,10 @@
 	
 	menu_adicionar_inicio:
 		jal	adicionar_inicio
+		j	main
+		
+	menu_adicionar_fim:
+		jal	adicionar_fim
 		j	main
 			
 	menu_listar_trem:	
@@ -91,6 +98,58 @@
 		sw	t2, 8(a0)
 		
 		sw	a0, 0(s0)
+		
+		jr	ra
+		
+	adicionar_fim:
+		la	a0, str_ID	#"ID: "
+		addi	a7, zero, 4
+		ecall
+		
+		addi	a7, zero, 5	#[ID]
+		ecall
+		
+		add	t0, zero, a0	#t0 <- ID
+		
+		la	a0, str_tipo	#"Tipo: "
+		addi	a7, zero, 4
+		ecall
+		
+		addi	a7, zero, 5	#[Tipo]
+		ecall
+		
+		add	t1, zero, a0	#t1 <- Tipo
+		
+		la	a0, str_n	#\n\n"
+		addi	a7, zero, 4
+		ecall
+		ecall
+	
+		addi	a0, zero, 12	#Reserva de 12 bytes para a nova estacao
+		addi	a7, zero, 9
+		ecall
+		
+		sw	t0, 0(a0)
+		sw	t1, 4(a0)
+		
+		addi	t2, zero, -1	#t2 <- -1 (para comparar com o ponteiro prox)
+		
+		sw	t2, 8(a0)	#[a0].prox = -1
+	
+		add	t0, zero, s0	#t0 <- endereco do proximo vagao
+		
+	loop_chegar_ao_fim:
+		lw	t1, 0(t0)	#t1 <- *t0
+		
+		addi	t4, t0, 8	#t4 <- endereço do ultimo ponteiro (que tem valor -1)
+		
+		beq	t1, t2, chegou_fim
+		addi	t0, t1, 8
+		
+		j	loop_chegar_ao_fim
+		
+	chegou_fim:
+		sw	a0, 0(t0)
 		
 		jr	ra
 		
