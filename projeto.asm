@@ -6,7 +6,7 @@
 		.asciz	"Tipo: "
 	str_n:	.asciz	"\n"
 	str_nao_encontrado:
-		.asciz "ID não encontrado.\n"
+		.asciz "ID nao encontrado.\n"
 	str_encontrado:
 		.asciz "ID encontrado.\n"
 		.align	2
@@ -27,7 +27,7 @@
 		#s1 : endereco do ultimo vagao
 		#t0-2 : iteradores (funcoes listar e remover por ID)
 		
-		#Estrutura do vagão
+		#Estrutura do vagao
 		#Todos os tipos de dados ocupam uma word de memória (em 32 bits, 4 bytes)
 		#byte	informacao
 		#0-3	ID (int)
@@ -73,6 +73,10 @@
 		
 	menu_adicionar_fim:
 		jal	adicionar_fim
+		j	main
+		
+	menu_buscar_id:
+		jal	buscar_id
 		j	main
 			
 	menu_listar_trem:	
@@ -220,8 +224,13 @@
 		
 		jr 	ra
 	buscar_id:
+		la	a0, str_ID	#"ID: "
+		addi	a7, zero, 4
+		ecall
+	
 		addi	a7, zero, 5
 		ecall
+		
 		add 	t3, zero, a0	# t3 = a0 = id procurado
 		la 	t1, loc_prox	# vagao** t1 = &loc_prox
 		lw 	t0, 0(t1)	# vagao* t0 = *(t1)
