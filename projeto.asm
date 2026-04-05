@@ -31,8 +31,8 @@
 		#Todos os tipos de dados ocupam uma word de memória (em 32 bits, 4 bytes)
 		#byte	informacao
 		#0-3	ID (int)
-		#4-7	Tipo do vagão (int)
-		#8-11	Ponteiro pro próximo vagão (ponteiro)
+		#4-7	Tipo do vagao (int)
+		#8-11	Ponteiro pro próximo vagao (ponteiro)
 		
 		#Observacoes:
 		#No C, a seta -> é uma desreferencia + .
