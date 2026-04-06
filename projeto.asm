@@ -9,6 +9,10 @@
 		.asciz 	"ID nao encontrado.\n"
 	str_encontrado:
 		.asciz 	"ID encontrado.\n"
+	
+	str_removido:
+		.asciz 	"Vagao removido.\n"	
+	
 	str_erro_id:	
 		.asciz 	"Erro: Vagao com mesmo ID ja existe.\n\n"
 	str_erro_tipo:	
@@ -63,6 +67,9 @@
 		addi	t0, zero, 2
 		beq	a0, t0, menu_adicionar_fim
 		
+		addi	t0, zero, 3
+		beq	a0, t0, menu_remover_id
+		
 		addi	t0, zero, 4
 		beq	a0, t0, menu_listar_trem
 		
@@ -90,6 +97,10 @@
 		jal	listar_trem
 		j	main
 		
+	menu_remover_id:
+		jal	remover_id
+		j	main
+		
 	alocar_vagao:
 		la	a0, str_ID	#"ID: "
 		addi	a7, zero, 4
@@ -110,8 +121,8 @@
 	loop_verificar_id:
 		beq	t2, t3, id_ok	# se chegou no fim (-1), o ID esta livre
 		lw	t4, 0(t2)	# t4 = ID do vagão atual do loop
-		beq	t0, t4, erro_id	# Se os IDs forem iguais, aborta
-		lw	t2, 8(t2)	# Avança para o próximo vagão
+		beq	t0, t4, erro_id	# se os IDs forem iguais, erro
+		lw	t2, 8(t2)	# avança para o próximo vagão
 		j	loop_verificar_id
 		
 	id_ok:
@@ -240,6 +251,59 @@
 		
 		jr	ra
 		
+	remover_id:
+		la	a0, str_ID	#"ID: "
+		addi	a7, zero, 4
+		ecall
+	
+		addi	a7, zero, 5
+		ecall
+		add 	t3, zero, a0	# t3 = ID que queremos remover
+		
+		la 	t1, loc_id	# t1 = endereço base da locomotiva (nosso "anterior")
+		lw	t2, 0(t1)	# t2 = ID da locomotiva
+		beq	t3, t2, erro_remover_loc
+		
+		lw	t0, 8(t1)	# t0 = endereço do primeiro vagao dinamico (nosso "atual")
+		addi	t4, zero, -1	# Criterio de parada
+		
+	loop_remover:
+					# Chegou ao fim (-1) sem achar
+		beq	t0, t4, remover_nao_encontrado	
+		
+		lw	t2, 0(t0)	# Le o ID do vagao atual
+					# achou o vagao
+		beq	t2, t3, faz_remocao		
+		
+		add	t1, zero, t0	# anterior (t1) assume o lugar do atual (t0)
+		lw	t0, 8(t0)	# atual (t0) pula para o proximo
+		
+		j	loop_remover
+		
+		# t1 = vagao anterior, t0 = vagao a ser removido
+	faz_remocao:
+		# o prox do anterior recebe o prox do atual
+		lw	t2, 8(t0)	# t2 = endereço que o vagao removido estava apontando
+		sw	t2, 8(t1)	# atualiza o ponteiro do vagao anterior
+		
+		addi	a7, zero, 4
+		la	a0, str_removido
+		ecall
+		
+		jr	ra
+		
+	erro_remover_loc:
+		la	a0, str_erro_rem_loc
+		addi	a7, zero, 4
+		ecall
+		jr	ra
+		
+	remover_nao_encontrado:
+		la	a0, str_nao_encontrado
+		addi	a7, zero, 4
+		ecall
+		jr	ra
+		
 	listar_trem:
 		addi	sp, sp, -8
 		sw	ra, 4(sp)
@@ -308,7 +372,6 @@
 		addi 	a7, zero, 4
 		ecall
 		add	a0, zero, t0	#retornando -1 (informando q n foi achado)
-		jr 	ra
 		
 	fim_buscar:
 		lw	ra, 0(sp)
