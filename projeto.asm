@@ -40,7 +40,7 @@
 		
 		#Estrutura do vagao
 		#Todos os tipos de dados ocupam uma word de memória (em 32 bits, 4 bytes)
-		#byte	informacao
+		#bytes	informacao
 		#0-3	ID (int)
 		#4-7	Tipo do vagão (int)
 		#8-11	Ponteiro pro próximo vagão (ponteiro)
@@ -50,8 +50,6 @@
 		#loc_proximo é ponteiro
 		
 		.globl 	main
-
-		la	s0, loc_prox
 				
 		#Inicio (laco principal):
 	main:	addi	a7, zero, 4	#Texto de inicio
@@ -198,30 +196,35 @@
 		jr	ra
 		
 	adicionar_inicio:
-		addi	sp, sp, -4	#aloca 1 palavra na stack
-		sw	ra, 0(sp)	#ra_inicio no topo da stack
+		addi	sp, sp, -8	#aloca 2 palavras na stack
+		sw	s0, 4(sp)
+		sw	ra, 0(sp)	#ra_inicio no topo da stack (voltar para main)
 		
 		jal	alocar_vagao
 					#a0 <- endereco do vagao alocado
 		beq	a0, zero, erro_inicio
+		
+		la	s0, loc_prox
 		
 		lw	t2, 0(s0)	# (vagao*)t2 recebe o endereco do primeiro elemento da lista
 		sw	t2, 8(a0)	# *(a0+2) (que é a0.loc_prox) = t2 = *s0
 		
 		sw	a0, 0(s0)	# *s0 = a0, ou seja, loc_prox = a0
 		
-		lw	ra, 0(sp)	#recupera o ra_inicio
-		addi	sp, sp, 4	#desaloca o topo da stack
+		lw	s0, 4(sp)
+		lw	ra, 0(sp)	#recupera o ra_inicio (voltar para main)
+		addi	sp, sp, 8	#desaloca o topo da stack
 		
 		jr	ra
 		
 	erro_inicio:
 		lw	ra, 0(sp)	
-		addi	sp, sp, 4	
+		addi	sp, sp, 8
 		jr	ra
 		
 	adicionar_fim:
-		addi	sp, sp, -4
+		addi	sp, sp, -8
+		sw	s0, 4(sp)
 		sw	ra, 0(sp)
 		
 		jal	alocar_vagao
@@ -231,6 +234,8 @@
 		addi	t2, zero, -1	#t2 <- -1 (para comparar com o ponteiro prox)
 		
 		sw	t2, 8(a0)	#[a0].prox = -1
+		
+		la	s0, loc_prox
 	
 		add	t0, zero, s0	#t0 <- endereco do proximo vagao
 		
@@ -246,8 +251,9 @@
 		sw	a0, 0(t0)
 		
 	erro_fim:
+		lw	s0, 4(sp)
 		lw	ra, 0(sp)
-		addi	sp, sp, 4
+		addi	sp, sp, 8
 		
 		jr	ra
 		
